@@ -38,7 +38,7 @@ void Config()
 
    // Geant4 VMC 2.x
    TG4RunConfiguration* runConfiguration
-           = new TG4RunConfiguration("geomRoot", "QGSP_FTFP_BERT", "stepLimiter+specialCuts+specialControls+stackPopper");
+           = new TG4RunConfiguration("geomRoot", "QGSP_BERT_EMV+optical", "stepLimiter+specialCuts+specialControls+stackPopper");
 
    // Geant4 VMC 3.0
    //Bool_t mtMode = true;
@@ -71,5 +71,7 @@ void Config()
    //set geant4 specific stuff
   geant4->SetMaxNStep(10000);  // default is 30000
   geant4->ProcessGeantMacro(configm1.Data());
+  geant4->ProcessGeantCommand("/mcTracking/loopVerbose 0");  // Suppress verbose info from tracks which reached maximum number of steps
+                                                             // (default value is 30000)  
 
 }
