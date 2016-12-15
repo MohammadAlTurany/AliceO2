@@ -1,8 +1,8 @@
-eventDisplay()
+void eventDisplay()
 {
   //-----User Settings:-----------------------------------------------
-  TString  InputFile     ="test.root";
-  TString  ParFile       ="params.root";
+  TString  InputFile     ="AliceO2_TGeant3.mc_1_event.root";
+  TString  ParFile       ="AliceO2_TGeant3.params_1.root";
   TString  OutFile	 ="tst.root";
 
 
