@@ -543,6 +543,7 @@ o2_define_bucket(
     tpc_base_bucket
     Field
     DetectorsBase
+    Generators
     TPCBase
     SimulationDataFormat
     Geom
@@ -639,7 +640,8 @@ o2_define_bucket(
     generators_bucket
 
     DEPENDENCIES
-    Base SimulationDataFormat pythia6 pythia8 MathCore
+    #   Base SimulationDataFormat pythia6 pythia8 MathCore RIO Tree
+    Base SimulationDataFormat MathCore RIO Tree
 
     INCLUDE_DIRECTORIES
     ${ROOT_INCLUDE_DIR}

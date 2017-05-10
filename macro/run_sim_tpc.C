@@ -19,6 +19,8 @@
   #include "Field/MagneticField.h"
 
   #include "DetectorsPassive/Cave.h"
+  #include "Generators/PersistentStackGenerator.h"
+  #include "Generators/FromTreeKinematicsGenerator.h"
 
   #include "TPCSimulation/Detector.h"
 #endif
@@ -80,20 +82,24 @@ void run_sim_tpc(Int_t nEvents = 10, TString mcEngine = "TGeant3")
 
   // Create PrimaryGenerator
   FairPrimaryGenerator* primGen = new FairPrimaryGenerator();
-  FairBoxGenerator* boxGen = new FairBoxGenerator(211, 10); /*protons*/
+  
+  //FairBoxGenerator* boxGen = new FairBoxGenerator(211, 2000); /*protons*/
 
-  //boxGen->SetThetaRange(0.0, 90.0);
-  boxGen->SetEtaRange(-0.9,0.9);
-  boxGen->SetPRange(0.1, 5);
-  boxGen->SetPhiRange(0., 360.);
-  boxGen->SetDebug(kTRUE);
+  // boxGen->SetThetaRange(0.0, 90.0);
+  // boxGen->SetEtaRange(-0.9,0.9);
+  // boxGen->SetPRange(0.1, 5);
+  //boxGen->SetPhiRange(0., 360.);
+  // boxGen->SetDebug(kTRUE);
 
-  primGen->AddGenerator(boxGen);
+  // primGen->AddGenerator(boxGen);
 
+  auto gen = new o2::eventgen::FromTreeKinematicsGenerator("Kinematics.root");
+  primGen->AddGenerator(gen);
+    
   run->SetGenerator(primGen);
 
   // store track trajectories
- run->SetStoreTraj(kTRUE);
+  // run->SetStoreTraj(kTRUE);
 
   // Initialize simulation run
   run->Init();

@@ -16,7 +16,10 @@
 #pragma link off all classes;
 #pragma link off all functions;
 
-#pragma link C++ class  Pythia6Generator+;
+//#pragma link C++ class  Pythia6Generator+;
 #pragma link C++ class  Pythia8Generator+;
+#pragma link C++ class  o2::eventgen::HijingGenerator+;
+#pragma link C++ class  o2::eventgen::PersistentStackGenerator+;
+#pragma link C++ class  o2::eventgen::FromTreeKinematicsGenerator+;
 
 #endif

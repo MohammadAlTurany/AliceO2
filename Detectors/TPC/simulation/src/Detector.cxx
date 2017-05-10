@@ -45,6 +45,7 @@
 
 
 #include <iostream>
+#include <cmath>
 
 using std::cout;
 using std::endl;
@@ -52,7 +53,16 @@ using std::ios_base;
 using std::ifstream;
 using namespace o2::TPC;
 
-//#define NEWHIT 1
+// helper function to convert spatial 
+template <typename T>
+T ToSector(T x, T y) {
+  static const T invangle(static_cast<T>(180)/static_cast<T>(M_PI*20.)); // the angle describing one sector
+  // force positive angle for conversion
+  return (std::atan2(y,x) + static_cast<T>(M_PI))*invangle;
+}
+
+
+#define NEWHIT 1
 
 Detector::Detector()
   : o2::Base::Detector("TPC", kTRUE, kAliTpc),
@@ -62,6 +72,9 @@ Detector::Detector()
     mGeoFileName(),
     mEventNr(0)
 {
+  for(int i=0;i<18;++i){
+    mHitsPerSectorCollection[i]=new TClonesArray("o2::TPC::LinkableHitGroup");
+  }
 }
 
 Detector::Detector(const char* name, Bool_t active)
@@ -72,8 +85,11 @@ Detector::Detector(const char* name, Bool_t active)
     mGeoFileName(),
     mEventNr(0)
 {
-
+  for(int i=0;i<18;++i){
+    mHitsPerSectorCollection[i]=new TClonesArray("o2::TPC::LinkableHitGroup");
+  }
 }
+
 
 Detector::~Detector()
 {
@@ -258,17 +274,20 @@ Bool_t  Detector::ProcessHits(FairVolume* vol)
   float time    = refMC->TrackTime() * 1.0e09;
   int trackID = refMC->GetStack()->GetCurrentTrackNumber();
   int detID   = vol->getMCid();
-
+  int sectorID = static_cast<int>(ToSector(position.Y(), position.X()));
+  
 #ifdef NEWHIT
   static int oldTrackId = trackID;
   static int oldDetId = detID;
   static int groupCounter = 0;
-
+  static int oldSectorId = sectorID;
+				  
   //  a new group is starting -> put it into the container
   static LinkableHitGroup *currentgroup = nullptr;
   if (groupCounter == 0) {
-    TClonesArray& clref = *mHitGroupCollection;
-
+    //TClonesArray& clref = *mHitGroupCollection;
+    TClonesArray& clref = *mHitsPerSectorCollection[sectorID];
+    
     // push-back in place
     Int_t size = clref.GetEntriesFast();
     currentgroup = new(clref[size]) LinkableHitGroup(trackID);
@@ -276,16 +295,18 @@ Bool_t  Detector::ProcessHits(FairVolume* vol)
     // set the MC truth link for this group
     currentgroup->SetLink(FairLink(-1, mEventNr, mMCTrackBranchId, trackID)); 
   }
-  if ( trackID == oldTrackId && oldDetId == detID ){
+  if ( trackID == oldTrackId && oldSectorId == sectorID ){
     groupCounter++;
     currentgroup->addHit(position.X(), position.Y(), position.Z(), time, nel);
   }
   // finish group
   else {
     oldTrackId = trackID;
+    oldSectorId = sectorID;
     groupCounter = 0;
   }
 #else
+  LOG(INFO) << "#" << position.X() << " " << position.Y() << " atan2 value: " << 180/(M_PI)*atan2(position.Y(), position.X()) << " S" << static_cast<int>(ToSector(position.X(), position.Y()))  << "\n"; 
   addHit(position.X(),  position.Y(),  position.Z(), time, nel, trackID, detID);
 #endif
 
@@ -303,11 +324,12 @@ Bool_t  Detector::ProcessHits(FairVolume* vol)
   return kTRUE;
 }
   
-  
-
 void Detector::EndOfEvent()
 {
   mHitGroupCollection->Clear();
+  for(int i=0;i<18;++i) {
+    mHitsPerSectorCollection[i]->Clear();
+  }
   mPointCollection->Clear();
   ++mEventNr;
 }
@@ -322,6 +344,11 @@ void Detector::Register()
   auto *mgr=FairRootManager::Instance();
 #ifdef NEWHIT
   mgr->Register("TPCGroupedHits", "TPC", mHitGroupCollection, kTRUE);
+  for (int i=0;i<18;++i) {
+    TString name;
+    name.Form("TPCHitsSector%d", i);
+    mgr->Register(name.Data(), "TPC", mHitsPerSectorCollection[i], kTRUE);
+  }
 #else
   mgr->Register("TPCPoint", "TPC", mPointCollection, kTRUE);
 #endif
@@ -332,6 +359,9 @@ TClonesArray* Detector::GetCollection(Int_t iColl) const
 {
 #ifdef NEWHIT
   if (iColl == 0) { return mHitGroupCollection; }
+  else if (iColl < 19) {
+    return mHitsPerSectorCollection[iColl-1];
+  }
 #else
   if (iColl == 0) { return mPointCollection; }
 #endif
@@ -342,6 +372,9 @@ void Detector::Reset()
 {
 #ifdef NEWHIT
   mHitGroupCollection->Clear();
+  for(int i=0;i<18;++i) {
+    mHitsPerSectorCollection[i]->Clear();
+  }
 #else
   mPointCollection->Clear();
 #endif
