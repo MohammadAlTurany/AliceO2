@@ -14,6 +14,7 @@
   #include "FairBoxGenerator.h"
   #include "FairParRootFileIo.h"
   #include "FairSystemInfo.h"
+  #include "FairMCEventHeader.h"
 
   #include "TGeoGlobalMagField.h"
   #include "Field/MagneticField.h"
@@ -21,6 +22,7 @@
   #include "DetectorsPassive/Cave.h"
   #include "Generators/PersistentStackGenerator.h"
   #include "Generators/FromTreeKinematicsGenerator.h"
+  #include "SimulationDataFormat/Stack.h"
 
   #include "TPCSimulation/Detector.h"
 #endif
@@ -58,7 +60,7 @@ void run_sim_tpc(Int_t nEvents = 10, TString mcEngine = "TGeant3")
   // Create simulation run
   FairRunSim* run = new FairRunSim();
   // enable usage of the fair link mechanism
-  run->SetUseFairLinks(kTRUE);
+  run->SetUseFairLinks(kFALSE);
 
   run->SetName(mcEngine);      // Transport engine
   run->SetOutputFile(outFile); // Output file
@@ -98,6 +100,11 @@ void run_sim_tpc(Int_t nEvents = 10, TString mcEngine = "TGeant3")
     
   run->SetGenerator(primGen);
 
+  // skip 2 events
+  o2::Data::Stack *stack = new o2::Data::Stack();
+  primGen->SetEvent(new FairMCEventHeader());
+  //primGen->GenerateEvent(stack);
+  //primGen->GenerateEvent(stack);
   // store track trajectories
   // run->SetStoreTraj(kTRUE);
 
@@ -111,7 +118,9 @@ void run_sim_tpc(Int_t nEvents = 10, TString mcEngine = "TGeant3")
   rtdb->setOutput(parOut);
   rtdb->saveOutput();
   rtdb->print();
-
+  timer.Stop();
+  std::cout << "Real time " << timer.RealTime() << " s, CPU time " << timer.CpuTime() << "s" << std::endl << std::endl;
+  timer.Start();
   // Start run
   run->Run(nEvents);
   delete run;
@@ -129,6 +138,6 @@ void run_sim_tpc(Int_t nEvents = 10, TString mcEngine = "TGeant3")
   std::cout << "Macro finished succesfully." << std::endl;
   std::cout << "Output file is " << outFile << std::endl;
   std::cout << "Parameter file is " << parFile << std::endl;
-  std::cout << "Real time " << rtime << " s, CPU time " << ctime << "s" << std::endl << std::endl;
+  std::cout << "Real time (tracking) " << rtime << " s, CPU time " << ctime << "s" << std::endl << std::endl;
   std::cout << "Memory used " << sysinfo.GetMaxMemory() << "\n";
 }

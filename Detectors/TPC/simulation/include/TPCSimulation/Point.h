@@ -34,24 +34,127 @@ class ElementalHit {
 // and can be stored as element of a TClonesArray into a branch
 class LinkableHitGroup : public o2::BaseHit {
 public:
-  LinkableHitGroup() : mHits() {}
+  LinkableHitGroup() :
+#ifdef HIT_AOS
+  mHits()
+#else
+  mHitsX_v(),
+  mHitsY_v(),
+  mHitsZ_v(),
+  mHitsT_v(),
+  mHitsE_v(),
+  mHitsX(nullptr),
+  mHitsY(nullptr),
+  mHitsZ(nullptr),
+  mHitsT(nullptr),
+  mHitsE(nullptr),
+  mSize(0)
+#endif
+    {
+    }
 
-  LinkableHitGroup(int trackID) : mHits() {
+  LinkableHitGroup(int trackID) :
+#ifdef HIT_AOS
+  mHits()
+#else
+  mHitsX_v(),
+  mHitsY_v(),
+  mHitsZ_v(),
+  mHitsT_v(),
+  mHitsE_v(),
+  mHitsX(nullptr),
+  mHitsY(nullptr),
+  mHitsZ(nullptr),
+  mHitsT(nullptr),
+  mHitsE(nullptr),
+  mSize(0)
+#endif
+  {
     SetTrackID(trackID);
   }
 
   ~LinkableHitGroup() override = default;
 
-  void addHit(float x, float y, float z, float time, float e) {
+  void addHit(float x, float y, float z, float time, short e) {
+#ifdef HIT_AOS
     mHits.emplace_back(x,y,z,time,e);
+#else
+    //    if(e > 255){
+    //  std::cerr << "charge overflow << " << e << "\n";
+    //}
+    unsigned char q = e;
+    mHitsX_v.emplace_back(x);
+    mHitsY_v.emplace_back(y);
+    mHitsZ_v.emplace_back(z);
+    mHitsT_v.emplace_back(time);
+    mHitsE_v.emplace_back(q);
+    mSize=mHitsX_v.size();
+    mHitsX=&mHitsX_v[0];
+    mHitsY=&mHitsY_v[0];
+    mHitsZ=&mHitsZ_v[0];
+    mHitsT=&mHitsT_v[0];
+    mHitsE=&mHitsE_v[0];
+#endif
   }
 
-  size_t getSize() const {return mHits.size();}
-  std::vector<o2::TPC::ElementalHit> const & getHitGroup() const { return mHits; }
+  size_t getSize() const {
+#ifdef HIT_AOS
+    return mHits.size();
+#else
+    return mSize;
+#endif
+  }
 
+  ElementalHit getHit(size_t index) const {
+#ifdef HIT_AOS
+    // std::vector storage
+    return mHits[index];
+#else
+    return ElementalHit(mHitsX[index],mHitsY[index],mHitsZ[index],mHitsT[index],mHitsE[index]);
+#endif
+  }
+
+  void shrinkToFit() {
+    // shrink all the containers to have exactly the required size
+    // might improve overall memory consumption
+#ifdef HIT_AOS
+    // std::vector storage
+    mHits.shrink_to_fit();
+#else
+    mHitsX_v.shrink_to_fit();
+    mHitsY_v.shrink_to_fit();
+    mHitsZ_v.shrink_to_fit();
+    mHitsT_v.shrink_to_fit();
+    mHitsE_v.shrink_to_fit();
+    mHitsX=&mHitsX_v[0];
+    mHitsY=&mHitsY_v[0];
+    mHitsZ=&mHitsZ_v[0];
+    mHitsT=&mHitsT_v[0];
+    mHitsE=&mHitsE_v[0];
+#endif
+  }
+
+  // in future we might want to have a method
+  // FitAndCompress()
+  // which does a track fit and produces a parametrized hit
+  // (such as done in a similar form in AliRoot)
 public:
+#ifdef HIT_AOS
   std::vector<o2::TPC::ElementalHit> mHits; // the hits for this group
-  // could think about AOS/SOA storage
+#else
+  std::vector<float> mHitsX_v; //! do not stream this (just for memory convenience)
+  std::vector<float> mHitsY_v; //! do not stream this
+  std::vector<float> mHitsZ_v; //! do not stream this
+  std::vector<float> mHitsT_v; //! do not stream this
+  std::vector<short> mHitsE_v; //! do not stream this ( unsigned char enough for number of electrons ?? )
+  // let us stream ordinary buffers for compression AND IO/speed!!
+  Int_t mSize;
+  float *mHitsX = nullptr; //[mSize]
+  float *mHitsY = nullptr; //[mSize]
+  float *mHitsZ = nullptr; //[mSize]
+  float *mHitsT = nullptr; //[mSize]
+  short *mHitsE = nullptr; //[mSize]
+#endif
   ClassDefOverride(LinkableHitGroup, 1);
 };
 

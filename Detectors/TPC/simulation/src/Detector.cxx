@@ -97,6 +97,9 @@ Detector::~Detector()
     mPointCollection->Delete();
     delete mPointCollection;
   }
+  std::cout << "Produced Hits " << mHitCounter << "\n";
+  std::cout << "Produced electrons " << mElectronCounter << "\n";
+  std::cout << "Stepping called " << mStepCounter << "\n";
 }
 
 void Detector::Initialize()
@@ -199,6 +202,7 @@ void Detector::SetSpecialPhysicsCuts()
 
 Bool_t  Detector::ProcessHits(FairVolume* vol)
 {
+  mStepCounter++;
   static auto *refMC = TVirtualMC::GetMC();
 
   /* This method is called from the MC stepping for the sensitive volume only */
@@ -231,8 +235,9 @@ Bool_t  Detector::ProcessHits(FairVolume* vol)
     
     // NPRIM etc. are defined in "TPCSimulation/Constants.h"
     const Float_t pp = NPRIM * BetheBlochAleph(betaGamma, BBPARAM[0], BBPARAM[1], BBPARAM[2], BBPARAM[3], BBPARAM[4]);
-    
-    refMC->SetMaxStep(-TMath::Log(rnd)/pp);
+
+    double ms = -TMath::Log(rnd)/pp;
+    refMC->SetMaxStep(ms);
   } else {
     
     refMC->SetMaxStep(0.2+(2.*rnd-1.)*0.05);  // 2 mm +- rndm*0.5mm step
@@ -297,16 +302,19 @@ Bool_t  Detector::ProcessHits(FairVolume* vol)
   }
   if ( trackID == oldTrackId && oldSectorId == sectorID ){
     groupCounter++;
+    mHitCounter++;
+    mElectronCounter+=nel;
     currentgroup->addHit(position.X(), position.Y(), position.Z(), time, nel);
   }
   // finish group
   else {
+    currentgroup->shrinkToFit();
     oldTrackId = trackID;
     oldSectorId = sectorID;
     groupCounter = 0;
   }
 #else
-  LOG(INFO) << "#" << position.X() << " " << position.Y() << " atan2 value: " << 180/(M_PI)*atan2(position.Y(), position.X()) << " S" << static_cast<int>(ToSector(position.X(), position.Y()))  << "\n"; 
+  //  LOG(INFO) << "#" << position.X() << " " << position.Y() << " atan2 value: " << 180/(M_PI)*atan2(position.Y(), position.X()) << " S" << static_cast<int>(ToSector(position.X(), position.Y()))  << "\n";
   addHit(position.X(),  position.Y(),  position.Z(), time, nel, trackID, detID);
 #endif
 

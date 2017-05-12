@@ -13,8 +13,6 @@
 
 class FairVolume;  // lines 10-10
 
-class AliTPCParam;
-
 namespace o2 {
 namespace TPC {
 
@@ -103,6 +101,9 @@ class Detector: public o2::Base::Detector {
     const TString& GetGeoFileName() const   { return mGeoFileName; }
 
   private:
+    int mHitCounter = 0;
+    int mElectronCounter = 0;
+    int mStepCounter = 0;
     
     SimulationType mSimulationType;       ///< Type of simulation
 
