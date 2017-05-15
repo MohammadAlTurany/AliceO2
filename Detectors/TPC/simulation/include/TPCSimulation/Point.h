@@ -6,15 +6,24 @@
 #include "SimulationDataFormat/BaseHits.h"
 #include <vector>
 
+#define TPC_GROUPED_HITS 1
+
 namespace o2 {
 namespace TPC {
 
 // a minimal and plain TPC hit class
 class ElementalHit {
  public:
-  Point3D<float> mPos; // cartesian position of Hit
+  //:: so as to get the right Point3D
+  ::Point3D<float> mPos; // cartesian position of Hit
   float mTime = -1;    // time of flight
   float mELoss = -2;   // energy loss
+
+  float GetX() const { return mPos.X(); }
+  float GetY() const { return mPos.Y(); }
+  float GetZ() const { return mPos.Z(); }
+  float GetEnergyLoss() const { return mELoss; }
+  float GetTime() const { return mTime; }
 
  public:
   ElementalHit() = default; // for ROOT IO
@@ -114,6 +123,21 @@ public:
 #endif
   }
 
+  // the Clear method of TObject
+  // called for instance from TClonesArray->Clear("C")
+  void Clear(Option_t */*option*/) override {
+#ifdef HIT_AOS
+    mHits.clear();
+#else
+    mHitsX_v.clear();
+    mHitsY_v.clear();
+    mHitsZ_v.clear();
+    mHitsT_v.clear();
+    mHitsE_v.clear();
+#endif
+    shrinkToFit();
+  }
+
   void shrinkToFit() {
     // shrink all the containers to have exactly the required size
     // might improve overall memory consumption
@@ -131,6 +155,7 @@ public:
     mHitsZ=&mHitsZ_v[0];
     mHitsT=&mHitsT_v[0];
     mHitsE=&mHitsE_v[0];
+    mSize=mHitsX_v.size();
 #endif
   }
 

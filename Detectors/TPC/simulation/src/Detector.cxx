@@ -62,7 +62,6 @@ T ToSector(T x, T y) {
 }
 
 
-#define NEWHIT 1
 
 Detector::Detector()
   : o2::Base::Detector("TPC", kTRUE, kAliTpc),
@@ -72,8 +71,10 @@ Detector::Detector()
     mGeoFileName(),
     mEventNr(0)
 {
+  std::cout << "StreamerBypass : " << mPointCollection->CanBypassStreamer() << "\n";
   for(int i=0;i<18;++i){
     mHitsPerSectorCollection[i]=new TClonesArray("o2::TPC::LinkableHitGroup");
+    mHitsPerSectorCollection[i]->BypassStreamer(true);
   }
 }
 
@@ -85,8 +86,10 @@ Detector::Detector(const char* name, Bool_t active)
     mGeoFileName(),
     mEventNr(0)
 {
+  std::cout << "StreamerBypass : " << mPointCollection->CanBypassStreamer() << "\n";
   for(int i=0;i<18;++i){
     mHitsPerSectorCollection[i]=new TClonesArray("o2::TPC::LinkableHitGroup");
+    mHitsPerSectorCollection[i]->BypassStreamer(true);
   }
 }
 
@@ -97,6 +100,12 @@ Detector::~Detector()
     mPointCollection->Delete();
     delete mPointCollection;
   }
+#ifdef TPC_GROUPED_HITS
+  for(int i=0;i<18;++i){
+    mHitsPerSectorCollection[i]->Delete();
+    delete mHitsPerSectorCollection[i];
+  }
+#endif
   std::cout << "Produced Hits " << mHitCounter << "\n";
   std::cout << "Produced electrons " << mElectronCounter << "\n";
   std::cout << "Stepping called " << mStepCounter << "\n";
@@ -281,7 +290,7 @@ Bool_t  Detector::ProcessHits(FairVolume* vol)
   int detID   = vol->getMCid();
   int sectorID = static_cast<int>(ToSector(position.Y(), position.X()));
   
-#ifdef NEWHIT
+#ifdef TPC_GROUPED_HITS
   static int oldTrackId = trackID;
   static int oldDetId = detID;
   static int groupCounter = 0;
@@ -336,7 +345,9 @@ void Detector::EndOfEvent()
 {
   mHitGroupCollection->Clear();
   for(int i=0;i<18;++i) {
-    mHitsPerSectorCollection[i]->Clear();
+    // passing "C" since objects contain other pointer data
+    // which needs to be cleaned up
+    mHitsPerSectorCollection[i]->Clear("C");
   }
   mPointCollection->Clear();
   ++mEventNr;
@@ -350,7 +361,7 @@ void Detector::Register()
       only during the simulation.
   */
   auto *mgr=FairRootManager::Instance();
-#ifdef NEWHIT
+#ifdef TPC_GROUPED_HITS
   mgr->Register("TPCGroupedHits", "TPC", mHitGroupCollection, kTRUE);
   for (int i=0;i<18;++i) {
     TString name;
@@ -365,7 +376,7 @@ void Detector::Register()
 
 TClonesArray* Detector::GetCollection(Int_t iColl) const
 {
-#ifdef NEWHIT
+#ifdef TPC_GROUPED_HITS
   if (iColl == 0) { return mHitGroupCollection; }
   else if (iColl < 19) {
     return mHitsPerSectorCollection[iColl-1];
@@ -378,7 +389,7 @@ TClonesArray* Detector::GetCollection(Int_t iColl) const
 
 void Detector::Reset()
 {
-#ifdef NEWHIT
+#ifdef TPC_GROUPED_HITS
   mHitGroupCollection->Clear();
   for(int i=0;i<18;++i) {
     mHitsPerSectorCollection[i]->Clear();
