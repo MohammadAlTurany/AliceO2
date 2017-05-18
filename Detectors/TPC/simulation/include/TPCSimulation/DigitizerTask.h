@@ -13,23 +13,23 @@
 #include <TClonesArray.h>
 
 namespace o2 {
-namespace TPC { 
+namespace TPC {
 
 class Digitizer;
-    
+
 /// \class DigitizerTask
 /// This task steers the digitization process and takes care of the input and output
 /// Furthermore, it allows for switching debug output on/off
-    
+
 class DigitizerTask : public FairTask{
   public:
-      
+
     /// Default constructor
     DigitizerTask(int s=-1);
-      
+
     /// Destructor
     ~DigitizerTask() override;
-      
+
     /// Inititializes the digitizer and connects input and output container
     InitStatus Init() override;
 
@@ -47,22 +47,24 @@ class DigitizerTask : public FairTask{
     /// Set the maximal number of written out time bins
     /// \param nTimeBinsMax Maximal number of time bins to be written out
     void setMaximalTimeBinWriteOut(int i) { mTimeBinMax = i; }
-      
+
     /// Digitization
     /// \param option Option
     void Exec(Option_t *option) override;
-      
+
     void FinishTask() override;
+
+    void FinishEvent() override;
 
   private:
     void fillHitArrayFromFile();
 
     Digitizer           *mDigitizer;    ///< Digitization process
     DigitContainer      *mDigitContainer;
-      
+
     TClonesArray        *mPointsArray;  ///< Array of detector hits, passed to the digitization
     TClonesArray        *mDigitsArray;  ///< Array of the Digits, passed from the digitization
-    
+
     std::string         mHitFileName;  ///< External hit file exported from AliRoot
 
     int                 mTimeBinMax;   ///< Maximum time bin to be written out
@@ -70,6 +72,7 @@ class DigitizerTask : public FairTask{
     int                 mHitSector=-1; ///< which sector to treat
 
     TClonesArray        *mSectorHitsArray[18];
+    TClonesArray        *mSectorDigiArray[18];
 
     ClassDefOverride(DigitizerTask, 1);
 };
@@ -84,7 +87,7 @@ void DigitizerTask::setDebugOutput(TString debugString)
   }
   LOG(INFO) << "\n";
 }
-  
+
 inline
 void DigitizerTask::setContinuousReadout(bool isContinuous)
 {

@@ -69,7 +69,7 @@ void run_digi_tpc(Int_t nEvents = 10, TString mcEngine = "TGeant3", Int_t isCont
         run->Init();
 
         timer.Start();
-        run->Run();
+        run->RunOnBranches();
 
         std::cout << std::endl << std::endl;
 

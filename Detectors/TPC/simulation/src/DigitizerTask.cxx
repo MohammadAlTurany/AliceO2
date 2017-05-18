@@ -73,23 +73,28 @@ InitStatus DigitizerTask::Init()
   else {
     for (int s=0;s<18;++s){
       char sectorname[17];
+      char digisectorname[17];
       sprintf(sectorname, "TPCHitsSector%d", s);
+      sprintf(digisectorname, "TPCDigiSector%d", s);
+
       std::cout << "FETCHING HITS FOR SECTOR " << s << "\n";
       mSectorHitsArray[s] = dynamic_cast<TClonesArray *>(mgr->GetObject(sectorname)); //TODO: does mPointsArray need to be deleted?
+      // Register output container
+      mSectorDigiArray[s]= new TClonesArray("o2::TPC::DigitMC");
+      mgr->Register(digisectorname , "TPC", mSectorDigiArray[s], kTRUE);
     }
   }
 #else
   mPointsArray = dynamic_cast<TClonesArray *>(mgr->GetObject("TPCPoint")); //TODO: does mPointsArray need to be deleted?
+  // Register output container
+  mDigitsArray = new TClonesArray("o2::TPC::DigitMC");
+  mgr->Register("TPCDigitMC", "TPC", mDigitsArray, kTRUE);
 #endif
   //  if (!mPointsArray) {
   //    LOG(ERROR) << "TPC points not registered in the FairRootManager. Exiting ..." << FairLogger::endl;
   //    return kERROR;
   //  }
-  
-  // Register output container
-  mDigitsArray = new TClonesArray("o2::TPC::DigitMC");
-  mgr->Register("TPCDigitMC", "TPC", mDigitsArray, kTRUE);
-  
+
   mDigitizer->init();
   mDigitContainer = mDigitizer->getDigitContainer();
   return kSUCCESS;
@@ -105,7 +110,7 @@ void DigitizerTask::Exec(Option_t *option)
   const int eventTime = Digitizer::getTimeBinFromTime(mgr->GetEventTime() * 0.001);
 
   LOG(DEBUG) << "Running digitization on new event at time bin " << eventTime << FairLogger::endl;
-  mDigitsArray->Delete();
+//  mDigitsArray->Delete();
 
 #ifdef TPC_GROUPED_HITS
 
@@ -118,20 +123,51 @@ void DigitizerTask::Exec(Option_t *option)
   else {
     mDigitContainer = mDigitizer->Process(mSectorHitsArray[mHitSector]);
   }
+  for (int s=0; s<18; ++s){
+    mDigitContainer->fillOutputContainer(mSectorDigiArray[s], eventTime, mIsContinuousReadout);
+  }
 
 #else
+  mDigitsArray->Delete();
   mDigitContainer = mDigitizer->Process(mPointsArray);
-#endif
   mDigitContainer->fillOutputContainer(mDigitsArray, eventTime, mIsContinuousReadout);
+
+#endif
 }
+
+void DigitizerTask::FinishEvent()
+{
+
+#ifdef TPC_GROUPED_HITS
+ for (int s=0;s<18;++s){
+   mSectorHitsArray[s]->Delete();
+   mSectorDigiArray[s]->Delete();
+ }
+#else
+  mPointsArray->Delete();
+  mDigitsArray->Delete();
+#endif
+ }
 
 void DigitizerTask::FinishTask()
 {
   if(!mIsContinuousReadout) return;
   FairRootManager *mgr = FairRootManager::Instance();
   mgr->SetLastFill(kTRUE); /// necessary, otherwise the data is not written out
-  mDigitsArray->Delete();
-  mDigitContainer->fillOutputContainer(mDigitsArray, mTimeBinMax, mIsContinuousReadout);
+
+ #ifdef TPC_GROUPED_HITS
+ for (int s=0;s<18;++s){
+   mSectorDigiArray[s]->Delete();
+  }
+
+ #else
+ mDigitsArray->Delete();
+ mDigitContainer->fillOutputContainer(mDigitsArray, mTimeBinMax, mIsContinuousReadout);
+ #endif
+
+
+
+
 }
 
 void DigitizerTask::fillHitArrayFromFile()
