@@ -71,7 +71,7 @@ InitStatus DigitizerTask::Init()
     mSectorHitsArray[mHitSector] = dynamic_cast<TClonesArray *>(mgr->GetObject(sectorname)); //TODO: does mPointsArray need to be deleted?
   }
   else {
-    for (int s=0;s<18;++s){
+    for (int s=0;s<2;++s){
       char sectorname[17];
       char digisectorname[17];
       sprintf(sectorname, "TPCHitsSector%d", s);
@@ -82,6 +82,8 @@ InitStatus DigitizerTask::Init()
       // Register output container
       mSectorDigiArray[s]= new TClonesArray("o2::TPC::DigitMC");
       mgr->Register(digisectorname , "TPC", mSectorDigiArray[s], kTRUE);
+      LOG(INFO) << " DigitizerTask::Init Branch  " << " Address : " << &mSectorDigiArray[s] << FairLogger::endl;
+
     }
   }
 #else
@@ -116,15 +118,18 @@ void DigitizerTask::Exec(Option_t *option)
 
   if (mHitSector == -1){
     // actually treat all sectors
-    for (int s=0; s<18; ++s){
+    for (int s=0; s<2; ++s){
       mDigitContainer = mDigitizer->Process(mSectorHitsArray[s]);
     }
   }
   else {
     mDigitContainer = mDigitizer->Process(mSectorHitsArray[mHitSector]);
   }
-  for (int s=0; s<18; ++s){
+  for (int s=0; s<2; ++s){
+    char digisectorname[17];
+    sprintf(digisectorname, "TPCDigiSector%d", s);
     mDigitContainer->fillOutputContainer(mSectorDigiArray[s], eventTime, mIsContinuousReadout);
+    mgr->FillBranch(digisectorname);
   }
 
 #else
@@ -139,7 +144,7 @@ void DigitizerTask::FinishEvent()
 {
 
 #ifdef TPC_GROUPED_HITS
- for (int s=0;s<18;++s){
+ for (int s=0;s<2;++s){
    mSectorHitsArray[s]->Delete();
    mSectorDigiArray[s]->Delete();
  }
@@ -156,7 +161,7 @@ void DigitizerTask::FinishTask()
   mgr->SetLastFill(kTRUE); /// necessary, otherwise the data is not written out
 
  #ifdef TPC_GROUPED_HITS
- for (int s=0;s<18;++s){
+ for (int s=0;s<2;++s){
    mSectorDigiArray[s]->Delete();
   }
 
